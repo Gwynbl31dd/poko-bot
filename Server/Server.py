@@ -19,9 +19,12 @@ from ADC import *
 from Ultrasonic import *
 from Command import COMMAND as cmd
 import yaml
+import logging
+logging.basicConfig(level = logging.INFO)
 
 VIDEO_CONFIG_PATH = "./config/video.yml"
 ROBOT_CONFIG_PATH = "./config/robot.yml"
+HOST_IP = "0.0.0.0" # Any interface
 
 class StreamingOutput(io.BufferedIOBase):
 
@@ -46,35 +49,20 @@ class Server:
         self.sonic=Ultrasonic()
         self.control.Thread_conditiona.start()
 
-    def get_interface_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return socket.inet_ntoa(fcntl.ioctl(s.fileno(),
-                                            0x8915,
-                                            struct.pack('256s',b'wlan0'[:15])
-                                            )[20:24])
-
     def turn_on_server(self):
-        host_ip=self.get_interface_ip()
         self.server_socket = socket.socket()
         self.server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self._set_port(self.server_socket, VIDEO_CONFIG_PATH, host_ip)
+        self._set_port(self.server_socket, VIDEO_CONFIG_PATH, HOST_IP)
         self.server_socket1 = socket.socket()
         self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self._set_port(self.server_socket1, ROBOT_CONFIG_PATH, host_ip)
-        print('Server address: '+host_ip)
+        self._set_port(self.server_socket1, ROBOT_CONFIG_PATH, HOST_IP)
+        logging.info('Server address: '+HOST_IP)
 
     def _set_port(self, socket_to_assign, config_path: str, ip: str):
         with open(config_path, 'r') as stream:
             data_loaded = yaml.safe_load(stream)
             socket_to_assign.bind((ip, data_loaded['port']))
             socket_to_assign.listen(1)
-        
-    def turn_off_server(self):
-        try:
-            self.connection.close()
-            self.connection1.close()
-        except :
-            print ('\n'+"No client connection")
     
     def reset_server(self):
         self.turn_off_server()
@@ -87,7 +75,6 @@ class Server:
     def send_data(self,connect,data):
         try:
             connect.send(data.encode('utf-8'))
-            #print("send",data)
         except Exception as e:
             print(e)
 
@@ -98,7 +85,7 @@ class Server:
         except:
             pass
         self.server_socket.close()
-        print ("socket video connected ... ")
+        logging.info("socket video connected ... ")
         camera = Picamera2()
         camera.configure(camera.create_video_configuration(main={"size": (400, 300)}))
         output = StreamingOutput()
@@ -110,7 +97,6 @@ class Server:
                 frame = output.frame
             try:                
                 lenFrame = len(output.frame) 
-                #print("output .length:",lenFrame)
                 lengthBin = struct.pack('<I', lenFrame)
                 self.connection.write(lengthBin)
                 self.connection.write(frame)
@@ -155,7 +141,6 @@ class Server:
                     try:
                         batteryVoltage=self.adc.batteryPower()
                         command=cmd.CMD_POWER+"#"+str(batteryVoltage[0])+"#"+str(batteryVoltage[1])+"\n"
-                        #print(command)
                         self.send_data(self.connection1,command)
                         if batteryVoltage[0] < 5.5 or batteryVoltage[1]<6:
                          for i in range(3):
@@ -218,4 +203,11 @@ class Server:
             stop_thread(thread_sonic)
         except:
             pass
-        print("close_recv")
+        logging.info("close_recv")
+
+    def turn_off_server(self):
+        try:
+            self.connection.close()
+            self.connection1.close()
+        except :
+            logging.warning('\n'+"No client connection")
