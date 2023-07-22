@@ -3,6 +3,7 @@ import os
 import sys,getopt
 from Server import *
 from Control import *
+import logging
 
 class App():
 
@@ -31,7 +32,7 @@ class App():
             self.server.server_socket.shutdown(2)
             self.server.server_socket1.shutdown(2)
         except Exception as e:
-            print(e)
+            logging.warning(e)
         
 if __name__ == '__main__':
     try:
