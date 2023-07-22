@@ -18,8 +18,13 @@ from Control import *
 from ADC import *
 from Ultrasonic import *
 from Command import COMMAND as cmd
+import yaml
+
+VIDEO_CONFIG_PATH = "./config/video.yml"
+ROBOT_CONFIG_PATH = "./config/robot.yml"
 
 class StreamingOutput(io.BufferedIOBase):
+
     def __init__(self):
         self.frame = None
         self.condition = Condition()
@@ -30,6 +35,7 @@ class StreamingOutput(io.BufferedIOBase):
             self.condition.notify_all()
 
 class Server:
+
     def __init__(self):
         self.tcp_flag=False
         self.led=Led()
@@ -46,20 +52,22 @@ class Server:
                                             0x8915,
                                             struct.pack('256s',b'wlan0'[:15])
                                             )[20:24])
+
     def turn_on_server(self):
-        #ip adress
-        HOST=self.get_interface_ip()
-        #Port 8002 for video transmission
+        host_ip=self.get_interface_ip()
         self.server_socket = socket.socket()
         self.server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self.server_socket.bind((HOST, 8002))              
-        self.server_socket.listen(1)
-        #Port 5002 is used for instruction sending and receiving
+        self._set_port(self.server_socket, VIDEO_CONFIG_PATH)
         self.server_socket1 = socket.socket()
         self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self.server_socket1.bind((HOST, 5002))
-        self.server_socket1.listen(1)
-        print('Server address: '+HOST)
+        self._set_port(self.server_socket1, ROBOT_CONFIG_PATH)
+        print('Server address: '+host_ip)
+
+    def _set_port(self, socket_to_assign, config_path: str)
+        with open(config_path, 'r') as stream:
+            data_loaded = yaml.safe_load(stream)
+            socket_to_assign.bind((HOST, data_loaded['port']))
+            socket_to_assign.listen(1)
         
     def turn_off_server(self):
         try:
@@ -82,7 +90,7 @@ class Server:
             #print("send",data)
         except Exception as e:
             print(e)
-            
+
     def transmission_video(self):
         try:
             self.connection,self.client_address = self.server_socket.accept()
@@ -211,7 +219,3 @@ class Server:
         except:
             pass
         print("close_recv")
-
-if __name__ == '__main__':
-    pass
-    
