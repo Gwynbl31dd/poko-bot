@@ -39,6 +39,7 @@ class Server:
         self.control=Control()
         self.sonic=Ultrasonic()
         self.control.Thread_conditiona.start()
+
     def get_interface_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         return socket.inet_ntoa(fcntl.ioctl(s.fileno(),
@@ -53,7 +54,6 @@ class Server:
         self.server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
         self.server_socket.bind((HOST, 8002))              
         self.server_socket.listen(1)
-        
         #Port 5002 is used for instruction sending and receiving
         self.server_socket1 = socket.socket()
         self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
@@ -75,12 +75,14 @@ class Server:
         self.instruction=threading.Thread(target=self.receive_instruction)
         self.video.start()
         self.instruction.start()
+
     def send_data(self,connect,data):
         try:
             connect.send(data.encode('utf-8'))
             #print("send",data)
         except Exception as e:
             print(e)
+            
     def transmission_video(self):
         try:
             self.connection,self.client_address = self.server_socket.accept()

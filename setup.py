@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+
 os.system("cd /usr/bin && sudo rm python && sudo ln -s python3 python")
 flag=0x00
 for x in range(1,4):
