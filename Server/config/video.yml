@@ -2,3 +2,5 @@
 height: 720
 width: 1280
 port: 8002
+effect: negative
+framerate: 15

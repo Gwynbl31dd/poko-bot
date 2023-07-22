@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import io
 import time
 import fcntl
@@ -86,8 +85,7 @@ class Server:
             pass
         self.server_socket.close()
         logging.info("socket video connected ... ")
-        camera = Picamera2()
-        camera.configure(camera.create_video_configuration(main={"size": (400, 300)}))
+        camera = self._get_camera_config(VIDEO_CONFIG_PATH)
         output = StreamingOutput()
         encoder = JpegEncoder(q=90)
         camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH) 
@@ -103,8 +101,17 @@ class Server:
             except Exception as e:
                 camera.stop_recording()
                 camera.close()
-                print ("End transmit ... " )
+                logging.info("End transmit ... " )
                 break
+
+    def _get_camera_config(self, config_path: str) -> Picamera2:
+        camera = Picamera2()
+        with open(config_path, 'r') as stream:
+            data_loaded = yaml.safe_load(stream)
+            camera.framerate = data_loaded['framerate']
+            camera.resolution = (data_loaded['height'], data_loaded['width'])
+            camera.image_effect = data_loaded['effect']
+        return camera
 
     def receive_instruction(self):
         try:
