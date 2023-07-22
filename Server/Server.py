@@ -57,16 +57,16 @@ class Server:
         host_ip=self.get_interface_ip()
         self.server_socket = socket.socket()
         self.server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self._set_port(self.server_socket, VIDEO_CONFIG_PATH)
+        self._set_port(self.server_socket, VIDEO_CONFIG_PATH, host_ip)
         self.server_socket1 = socket.socket()
         self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self._set_port(self.server_socket1, ROBOT_CONFIG_PATH)
+        self._set_port(self.server_socket1, ROBOT_CONFIG_PATH, host_ip)
         print('Server address: '+host_ip)
 
-    def _set_port(self, socket_to_assign, config_path: str)
+    def _set_port(self, socket_to_assign, config_path: str, ip: str):
         with open(config_path, 'r') as stream:
             data_loaded = yaml.safe_load(stream)
-            socket_to_assign.bind((HOST, data_loaded['port']))
+            socket_to_assign.bind((ip, data_loaded['port']))
             socket_to_assign.listen(1)
         
     def turn_off_server(self):
