@@ -4,7 +4,7 @@ import sys,getopt
 from Server import *
 from Control import *
 
-class Robot():
+class App():
 
     def __init__(self):
         self.server=Server()
@@ -35,10 +35,10 @@ class Robot():
         
 if __name__ == '__main__':
     try:
-        robot = Robot()
-        robot.start_server()
+        app = App()
+        app.start_server()
         while True:
             pass
     except KeyboardInterrupt:
-        robot.stop_server()
+        app.stop_server()
         os._exit(0)
