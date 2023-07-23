@@ -11,3 +11,4 @@ I also started to improve the thread and simplify the code.
 * Remove the useless UI (It was a simple on off button, that's pointless)
 * Does not block listening on one IP on wlan0. The server broadcast to any interfaces (0.0.0.0)
 * Add config files (video, robot, ...) in yaml format
+* Improved logs

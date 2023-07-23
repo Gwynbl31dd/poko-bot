@@ -24,6 +24,8 @@ logging.basicConfig(level = logging.INFO)
 VIDEO_CONFIG_PATH = "./config/video.yml"
 ROBOT_CONFIG_PATH = "./config/robot.yml"
 HOST_IP = "0.0.0.0" # Any interface
+IMAGE_QUALITY = 90
+ENCODING='utf-8'
 
 class StreamingOutput(io.BufferedIOBase):
 
@@ -47,19 +49,21 @@ class Server:
         self.control=Control()
         self.sonic=Ultrasonic()
         self.control.Thread_conditiona.start()
-        self.turn_on_server()
+        self.start()
 
-    def turn_on_server(self):
+    def start(self):
         self.server_socket = socket.socket()
-        self.server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self._set_port(self.server_socket, VIDEO_CONFIG_PATH, HOST_IP)
+        self._set_socket(self.server_socket, VIDEO_CONFIG_PATH)
         self.server_socket1 = socket.socket()
-        self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
-        self._set_port(self.server_socket1, ROBOT_CONFIG_PATH, HOST_IP)
+        self._set_socket(self.server_socket1, ROBOT_CONFIG_PATH)
         self.tcp_flag=True
         self._start_video_thread()
         self._start_instruction_thread()
         logging.info('Server listening... ')
+        
+    def _set_socket(self,socket_to_assign, config_path: str):
+        socket_to_assign.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
+        self._set_port(socket_to_assign, config_path, HOST_IP)
         
     def stop(self):
         self.tcp_flag=False
@@ -86,7 +90,7 @@ class Server:
 
     def send_data(self,connect,data):
         try:
-            connect.send(data.encode('utf-8'))
+            connect.send(data.encode(ENCODING))
         except Exception as e:
             print(e)
 
@@ -100,11 +104,11 @@ class Server:
         logging.info("socket video connected... ")
         camera = self._get_camera_config(VIDEO_CONFIG_PATH)
         output = StreamingOutput()
-        encoder = JpegEncoder(q=90)
+        encoder = JpegEncoder(q=IMAGE_QUALITY)
         camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH)
-        self._send_video(output,camera)
+        self._stream_video(output,camera)
         
-    def _send_video(self,output,camera: Picamera2):
+    def _stream_video(self,output: StreamingOutput,camera: Picamera2):
         while True:
             with output.condition:
                 output.condition.wait()
@@ -140,7 +144,7 @@ class Server:
         
         while True:
             try:
-                allData=self.connection1.recv(1024).decode('utf-8')
+                allData=self.connection1.recv(1024).decode(ENCODING)
             except:
                 if self.tcp_flag:
                     self._reset_server()
