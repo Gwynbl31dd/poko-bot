@@ -64,9 +64,6 @@ class Server:
     def _set_socket(self,socket_to_assign, config_path: str):
         socket_to_assign.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
         self._set_port(socket_to_assign, config_path, HOST_IP)
-        
-    def stop(self):
-        self.tcp_flag=False
 
     def _set_port(self, socket_to_assign, config_path: str, ip: str):
         with open(config_path, 'r') as stream:
@@ -83,12 +80,12 @@ class Server:
         self.instruction_thread.start()
     
     def _reset_server(self):
-        self.turn_off_server()
-        self.turn_on_server()
+        self.stop()
+        self.start()
         self._start_video_thread()
         self._start_instruction_thread()
 
-    def send_data(self,connect,data):
+    def send_data(self,connect,data: str):
         try:
             connect.send(data.encode(ENCODING))
         except Exception as e:
@@ -230,11 +227,12 @@ class Server:
             pass
         logging.info("close_recv")
 
-    def turn_off_server(self):
+    def stop(self):
+        self.tcp_flag=False
         try:
             stop_thread(self.video_thread)
             stop_thread(self.instruction_thread)
             self.connection.close()
             self.connection1.close()
         except :
-            logging.warning('\n'+"No client connection")
+            logging.warning("No client connection")
