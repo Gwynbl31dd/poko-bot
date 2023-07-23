@@ -97,6 +97,7 @@ class Server:
             self.connection=self.connection.makefile('wb')
         except:
             pass
+        
         self.server_socket.close()
         logging.info("socket video connected... ")
         camera = self._get_camera_config(VIDEO_CONFIG_PATH)
@@ -130,15 +131,8 @@ class Server:
             camera.resolution = (data_loaded['height'], data_loaded['width'])
             camera.image_effect = data_loaded['effect']
         return camera
-
-    def _receive_instruction(self):
-        try:
-            self.connection1, _ = self.server_socket1.accept()
-            print ("Client connection successful !")
-        except:
-            print ("Client connect failed")
-            self.server_socket1.close()
-        
+    
+    def _process_instruction(self):
         while True:
             try:
                 allData=self.connection1.recv(1024).decode(ENCODING)
@@ -168,11 +162,11 @@ class Server:
                         command=cmd.CMD_POWER+"#"+str(batteryVoltage[0])+"#"+str(batteryVoltage[1])+"\n"
                         self.send_data(self.connection1,command)
                         if batteryVoltage[0] < 5.5 or batteryVoltage[1]<6:
-                         for i in range(3):
-                            self.buzzer.run("1")
-                            time.sleep(0.15)
-                            self.buzzer.run("0")
-                            time.sleep(0.1)
+                            for i in range(3):
+                                self.buzzer.run("1")
+                                time.sleep(0.15)
+                                self.buzzer.run("0")
+                                time.sleep(0.1)
                     except:
                         pass
                 elif cmd.CMD_LED in data:
@@ -216,6 +210,12 @@ class Server:
                 else:
                     self.control.order=data
                     self.control.timeout=time.time()
+            
+    def _receive_instruction(self):
+        self._accept_instructions()
+
+        self._process_instruction()
+            
         try:
             stop_thread(thread_led)
         except:
@@ -225,6 +225,14 @@ class Server:
         except:
             pass
         logging.info("close_recv")
+        
+    def _accept_instructions(self):
+        try:
+            self.connection1, _ = self.server_socket1.accept()
+            print ("Client connection successful !")
+        except:
+            print ("Client connect failed")
+            self.server_socket1.close()
 
     def stop(self):
         self.tcp_flag=False
