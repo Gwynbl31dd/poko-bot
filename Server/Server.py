@@ -66,7 +66,7 @@ class Server:
     def _reset_server(self):
         self.turn_off_server()
         self.turn_on_server()
-        self.video=threading.Thread(target=self.transmission_video)
+        self.video=threading.Thread(target=self._transmission_video)
         self.instruction=threading.Thread(target=self.receive_instruction)
         self.video.start()
         self.instruction.start()
@@ -77,9 +77,9 @@ class Server:
         except Exception as e:
             print(e)
 
-    def transmission_video(self):
+    def _transmission_video(self):
         try:
-            self.connection,self.client_address = self.server_socket.accept()
+            self.connection, _ = self.server_socket.accept()
             self.connection=self.connection.makefile('wb')
         except:
             pass
@@ -88,7 +88,11 @@ class Server:
         camera = self._get_camera_config(VIDEO_CONFIG_PATH)
         output = StreamingOutput()
         encoder = JpegEncoder(q=90)
-        camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH) 
+        camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH)
+        self._send_video(output,camera)
+        
+
+    def _send_video(self,output,camera: Picamera2):
         while True:
             with output.condition:
                 output.condition.wait()
@@ -99,6 +103,7 @@ class Server:
                 self.connection.write(lengthBin)
                 self.connection.write(frame)
             except Exception as e:
+                logging.error(e)
                 camera.stop_recording()
                 camera.close()
                 logging.info("End transmit ... " )
@@ -115,7 +120,7 @@ class Server:
 
     def receive_instruction(self):
         try:
-            self.connection1,self.client_address1 = self.server_socket1.accept()
+            self.connection1, _ = self.server_socket1.accept()
             print ("Client connection successful !")
         except:
             print ("Client connect failed")

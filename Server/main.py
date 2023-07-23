@@ -10,17 +10,12 @@ class App():
 
     def __init__(self):
         self.server=Server()
-        self.server.turn_on_server()
-        self.server.tcp_flag=True
-        self.video=threading.Thread(target=self.server.transmission_video)
-        self.video.start()
-        self.instruction=threading.Thread(target=self.server.receive_instruction)
-        self.instruction.start()
+        self.start_server()
 
     def start_server(self):
         self.server.turn_on_server()
         self.server.tcp_flag=True
-        self.video=threading.Thread(target=self.server.transmission_video)
+        self.video=threading.Thread(target=self.server._transmission_video)
         self.video.start()
         self.instruction=threading.Thread(target=self.server.receive_instruction)
         self.instruction.start()
