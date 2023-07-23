@@ -1,7 +1,7 @@
 #coding:utf-8
 import time
 class Incremental_PID:
-    ''' PID controller'''
+
     def __init__(self,P=0.0,I=0.0,D=0.0):
         self.setPoint = 0.0
         self.Kp = P
