@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 
 import os
-import sys,getopt
-from Server import *
-from Control import *
-import logging
+from Server import Server
 
 class App():
 

@@ -76,7 +76,7 @@ class Server:
         self.video_thread.start()
         
     def _start_instruction_thread(self):
-        self.instruction_thread = threading.Thread(target=self.receive_instruction)
+        self.instruction_thread = threading.Thread(target=self._receive_instruction)
         self.instruction_thread.start()
     
     def _reset_server(self):
@@ -131,13 +131,13 @@ class Server:
             camera.image_effect = data_loaded['effect']
         return camera
 
-    def receive_instruction(self):
+    def _receive_instruction(self):
         try:
             self.connection1, _ = self.server_socket1.accept()
             print ("Client connection successful !")
         except:
             print ("Client connect failed")
-        self.server_socket1.close()
+            self.server_socket1.close()
         
         while True:
             try:
@@ -213,7 +213,6 @@ class Server:
                         GPIO.output(self.control.GPIO_4,True)
                     else:
                         GPIO.output(self.control.GPIO_4,False)
-                    
                 else:
                     self.control.order=data
                     self.control.timeout=time.time()
