@@ -14,14 +14,13 @@ class App():
 
     def start_server(self):
         self.server.turn_on_server()
-        self.server.tcp_flag=True
         self.video=threading.Thread(target=self.server._transmission_video)
         self.video.start()
         self.instruction=threading.Thread(target=self.server.receive_instruction)
         self.instruction.start()
 
     def stop_server(self):
-        self.server.tcp_flag=False
+        self.server.stop()
         try:
             stop_thread(self.video)
             stop_thread(self.instruction)
@@ -33,7 +32,6 @@ class App():
 if __name__ == '__main__':
     try:
         app = App()
-        app.start_server()
         while True:
             pass
     except KeyboardInterrupt:

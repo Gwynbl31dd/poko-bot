@@ -55,7 +55,11 @@ class Server:
         self.server_socket1 = socket.socket()
         self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
         self._set_port(self.server_socket1, ROBOT_CONFIG_PATH, HOST_IP)
-        logging.info('Server address: '+HOST_IP)
+        self.tcp_flag=True
+        logging.info('Server listening... ')
+        
+    def stop(self):
+        self.tcp_flag=False
 
     def _set_port(self, socket_to_assign, config_path: str, ip: str):
         with open(config_path, 'r') as stream:
