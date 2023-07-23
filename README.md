@@ -2,38 +2,12 @@
 
 Update of the freenove hexapod robot with a Raspberry Pi.
 
-This project is tentative and is not yet complete. I aim to expend the capabilities of the freenove hexapod robot to make it more autonomous and to add more features.
+This project's aim is to clean the dirty code made by Freenove.
+I also started to improve the thread and simplify the code. 
 
+## Improvements
 
-## Autostart
-
-```
-cp /home/apaulin/poko-bot/start.sh /home/apaulin/
-sudo chmod 777 start.sh
-mkdir ~/.config/autostart/
-```
-
-```
-sudo nano .config/autostart/start.desktop
-```
-
-And edit
-
-```
-[Desktop Entry]
-Type=Application
-Name=start
-NoDisplay=true
-Exec=/home/apaulin/start.sh
-```
-
-```
-sudo chmod +x .config/autostart/start.desktop
-```
-
-and finally
-
-```
-sudo reboot
-```
-
+* Clean the code and avoid duplication
+* Remove the useless UI (It was a simple on off button, that's pointless)
+* Does not block listening on one IP on wlan0. The server broadcast to any interfaces (0.0.0.0)
+* Add config files (video, robot, ...) in yaml format
