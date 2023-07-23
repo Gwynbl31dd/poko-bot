@@ -1,6 +1,7 @@
 import time
 import RPi.GPIO as GPIO
 class Ultrasonic:
+
     def __init__(self):
         GPIO.setwarnings(False)
         self.trigger_pin = 27
@@ -33,9 +34,4 @@ class Ultrasonic:
             distance_cm[i] = pingTime * 340.0 / 2.0 /10000.0
         distance_cm=sorted(distance_cm)
         return int(distance_cm[1])
-        
-# Main program logic follows:
-if __name__ == '__main__':
-    pass
-        
 

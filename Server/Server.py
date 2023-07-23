@@ -63,7 +63,7 @@ class Server:
             socket_to_assign.bind((ip, data_loaded['port']))
             socket_to_assign.listen(1)
     
-    def reset_server(self):
+    def _reset_server(self):
         self.turn_off_server()
         self.turn_on_server()
         self.video=threading.Thread(target=self.transmission_video)
@@ -126,12 +126,12 @@ class Server:
                 allData=self.connection1.recv(1024).decode('utf-8')
             except:
                 if self.tcp_flag:
-                    self.reset_server()
+                    self._reset_server()
                     break
                 else:
                     break
             if allData=="" and self.tcp_flag:
-                self.reset_server()
+                self._reset_server()
                 break
             else:
                 cmdArray=allData.split('\n')
@@ -167,9 +167,7 @@ class Server:
                 elif cmd.CMD_LED_MOD in data:
                     try:
                         stop_thread(thread_led)
-                        #print("stop,yes")
                     except:
-                        #print("stop,no")
                         pass
                     thread_led=threading.Thread(target=self.led.light,args=(data,))
                     thread_led.start()
@@ -186,7 +184,6 @@ class Server:
                         self.servo.setServoAngle(0,x)
                         self.servo.setServoAngle(1,y)
                 elif cmd.CMD_RELAX in data:
-                    #print(data)
                     if self.control.relax_flag==False:
                         self.control.relax(True)
                         self.control.relax_flag=True
