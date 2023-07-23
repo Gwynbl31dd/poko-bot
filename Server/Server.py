@@ -47,6 +47,7 @@ class Server:
         self.control=Control()
         self.sonic=Ultrasonic()
         self.control.Thread_conditiona.start()
+        self.turn_on_server()
 
     def turn_on_server(self):
         self.server_socket = socket.socket()
@@ -56,6 +57,8 @@ class Server:
         self.server_socket1.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
         self._set_port(self.server_socket1, ROBOT_CONFIG_PATH, HOST_IP)
         self.tcp_flag=True
+        self._start_video_thread()
+        self._start_instruction_thread()
         logging.info('Server listening... ')
         
     def stop(self):
@@ -66,14 +69,20 @@ class Server:
             data_loaded = yaml.safe_load(stream)
             socket_to_assign.bind((ip, data_loaded['port']))
             socket_to_assign.listen(1)
+            
+    def _start_video_thread(self):
+        self.video_thread = threading.Thread(target=self._transmission_video)
+        self.video_thread.start()
+        
+    def _start_instruction_thread(self):
+        self.instruction_thread = threading.Thread(target=self.receive_instruction)
+        self.instruction_thread.start()
     
     def _reset_server(self):
         self.turn_off_server()
         self.turn_on_server()
-        self.video=threading.Thread(target=self._transmission_video)
-        self.instruction=threading.Thread(target=self.receive_instruction)
-        self.video.start()
-        self.instruction.start()
+        self._start_video_thread()
+        self._start_instruction_thread()
 
     def send_data(self,connect,data):
         try:
@@ -88,14 +97,13 @@ class Server:
         except:
             pass
         self.server_socket.close()
-        logging.info("socket video connected ... ")
+        logging.info("socket video connected... ")
         camera = self._get_camera_config(VIDEO_CONFIG_PATH)
         output = StreamingOutput()
         encoder = JpegEncoder(q=90)
         camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH)
         self._send_video(output,camera)
         
-
     def _send_video(self,output,camera: Picamera2):
         while True:
             with output.condition:
@@ -220,6 +228,8 @@ class Server:
 
     def turn_off_server(self):
         try:
+            stop_thread(self.video_thread)
+            stop_thread(self.instruction_thread)
             self.connection.close()
             self.connection1.close()
         except :

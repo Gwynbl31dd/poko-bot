@@ -10,14 +10,6 @@ class App():
 
     def __init__(self):
         self.server=Server()
-        self.start_server()
-
-    def start_server(self):
-        self.server.turn_on_server()
-        self.video=threading.Thread(target=self.server._transmission_video)
-        self.video.start()
-        self.instruction=threading.Thread(target=self.server.receive_instruction)
-        self.instruction.start()
 
     def stop_server(self):
         self.server.stop()
@@ -28,12 +20,16 @@ class App():
             self.server.server_socket1.shutdown(2)
         except Exception as e:
             logging.warning(e)
+            
+    def run(self):
+        try:
+            while True:
+                pass
+        except KeyboardInterrupt:
+            self.stop_server()
+            os._exit(0)
         
 if __name__ == '__main__':
-    try:
-        app = App()
-        while True:
-            pass
-    except KeyboardInterrupt:
-        app.stop_server()
-        os._exit(0)
+    app = App()
+    app.run()
+
