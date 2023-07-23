@@ -11,6 +11,7 @@ import RPi.GPIO as GPIO
 from Command import COMMAND as cmd
 
 class Control:
+    
     def __init__(self):
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
