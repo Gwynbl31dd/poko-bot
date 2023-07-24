@@ -4,6 +4,7 @@ import math
 import os
 from Kalman import *
 from mpu6050 import mpu6050
+
 class IMU:
     def __init__(self):
         self.Kp = 100 
@@ -73,6 +74,7 @@ class IMU:
         gyro_data['y']=sum_gyro_y
         gyro_data['z']=sum_gyro_z
         return accel_data,gyro_data
+        
     def imuUpdate(self):
         accel_data = self.sensor.get_accel_data()    
          

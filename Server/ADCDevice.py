@@ -9,6 +9,7 @@
 import smbus
 
 class ADCDevice(object):
+
     def __init__(self):
         self.cmd = 0
         self.address = 0
@@ -28,6 +29,7 @@ class ADCDevice(object):
         self.bus.close()
         
 class PCF8591(ADCDevice):
+
     def __init__(self):
         super(PCF8591, self).__init__()
         self.cmd = 0x40     # The default command for PCF8591 is 0x40.
@@ -43,6 +45,7 @@ class PCF8591(ADCDevice):
         self.bus.write_byte_data(address,cmd,value) 
 
 class ADS7830(ADCDevice):
+    
     def __init__(self):
         super(ADS7830, self).__init__()
         self.cmd = 0x84

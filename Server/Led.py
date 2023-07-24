@@ -1,4 +1,3 @@
-# -*-coding: utf-8 -*-
 import time
 from rpi_ws281x import *
 # LED strip configuration:
@@ -20,6 +19,7 @@ class Led:
         self.strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
         # Intialize the library (must be called once before other functions).
         self.strip.begin()
+
     def LED_TYPR(self,order,R_G_B):
         B=R_G_B & 255
         G=R_G_B >> 8 & 255
@@ -28,6 +28,7 @@ class Led:
         color = [Color(G,R,B),Color(G,B,R),Color(R,G,B),Color(R,B,G),Color(B,R,G),Color(B,G,R)]
         if order in Led_type:
             return color[Led_type.index(order)]
+
     def colorWipe(self,strip, color, wait_ms=50):
         """Wipe color across display a pixel at a time."""
         color=self.LED_TYPR(self.ORDER,color)
@@ -99,6 +100,7 @@ class Led:
                 self.strip.setPixelColor(i,color)
             index=index >> 1
         self.strip.show()
+        
     def light(self,data):
         oldMod=self.LedMod
         if len(data) <4:

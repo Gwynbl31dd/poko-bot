@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import time
 import math
 import smbus
@@ -10,7 +9,9 @@ from Servo import*
 import numpy as np
 import RPi.GPIO as GPIO
 from Command import COMMAND as cmd
+
 class Control:
+    
     def __init__(self):
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
@@ -35,6 +36,7 @@ class Control:
         self.calibration()
         self.setLegAngle()
         self.Thread_conditiona=threading.Thread(target=self.condition)
+
     def readFromTxt(self,filename):
         file1 = open(filename + ".txt", "r")
         list_row = file1.readlines()
@@ -72,6 +74,7 @@ class Control:
         b=round(math.degrees(b))
         c=round(math.degrees(c))
         return a,b,c
+
     def angleToCoordinate(self,a,b,c,l1=33,l2=90,l3=110):
         a=math.pi/180*a
         b=math.pi/180*b
@@ -80,6 +83,7 @@ class Control:
         oy=round(l3*math.sin(a)*math.cos(b+c)+l2*math.sin(a)*math.cos(b)+l1*math.sin(a))
         oz=round(l3*math.cos(a)*math.cos(b+c)+l2*math.cos(a)*math.cos(b)+l1*math.cos(a))
         return ox,oy,oz
+
     def calibration(self):
         self.leg_point=[[140, 0, 0], [140, 0, 0], [140, 0, 0], [140, 0, 0], [140, 0, 0], [140, 0, 0]]
         for i in range(6):
@@ -141,6 +145,7 @@ class Control:
             self.servo.setServoAngle(27,self.angle[3][2])
         else:
             print("This coordinate point is out of the active range")
+
     def checkPoint(self):
         flag=True
         leg_lenght=[0,0,0,0,0,0]  
@@ -150,6 +155,7 @@ class Control:
           if leg_lenght[i] > 248 or leg_lenght[i] < 90:
             flag=False
         return flag
+
     def condition(self):
         while True:
             if (time.time()-self.timeout)>10 and  self.timeout!=0 and self.order[0]=='':
@@ -344,8 +350,6 @@ class Control:
                 break
             time.sleep(0.02)
             r,p,y=self.imu.imuUpdate()
-            #r=self.restriction(self.pid.PID_compute(r),-15,15)
-            #p=self.restriction(self.pid.PID_compute(p),-15,15)
             r=self.pid.PID_compute(r)
             p=self.pid.PID_compute(p)
             point=self.postureBalance(r,p,0)
@@ -364,8 +368,6 @@ class Control:
         z=Z/F
         delay=0.01
         point=copy.deepcopy(self.body_point)
-        #if y < 0:
-        #   angle=-angle 
         if angle!=0:
             x=0
         xy=[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]
@@ -436,10 +438,6 @@ class Control:
                     self.setLegAngle()
                     time.sleep(delay) 
                     aa+=1
-                  
-                             
-if __name__=='__main__':
-    pass
     
 
 
