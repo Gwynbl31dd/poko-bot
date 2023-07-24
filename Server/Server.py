@@ -163,12 +163,12 @@ class Server:
                 
             if instruction_data=="" and self.tcp_flag:
                 raise e
-            
             else:
                 cmdArray=instruction_data.split('\n')
                 logging.info(cmdArray)
                 if cmdArray[-1] !="":
                     cmdArray==cmdArray[:-1]
+                    
             for oneCmd in cmdArray:
                 data=oneCmd.split("#")
                 if data==None or data[0]=='':
