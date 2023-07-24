@@ -94,8 +94,8 @@ class Server:
         try:
             self.video_connection, _ = self.video_socket.accept()
             self.video_connection = self.video_connection.makefile('wb')
-        except:
-            pass
+        except Exception as e:
+            logging.error(e)
         
         self.video_socket.close()
         logging.info("socket video connected... ")
@@ -136,7 +136,8 @@ class Server:
             
     def _receive_instruction(self):
         self._accept_instructions()
-        self._process_instruction()
+        while self.tcp_flag:
+            self._process_instruction()
         logging.info("close_recv")
         
     def _accept_instructions(self):
@@ -151,19 +152,20 @@ class Server:
         while True:
             
             try:
-                allData=self.robot_connection.recv(1024).decode(ENCODING)
-            except:
+                instruction_data=self.robot_connection.recv(1024).decode(ENCODING)
+            except Exception as e:
+                logging.error(e)
                 if self.tcp_flag:
                     self._reset_server()
                     break
                 else:
                     break
                 
-            if allData=="" and self.tcp_flag:
+            if instruction_data=="" and self.tcp_flag:
                 self._reset_server()
                 break
             else:
-                cmdArray=allData.split('\n')
+                cmdArray=instruction_data.split('\n')
                 logging.info(cmdArray)
                 if cmdArray[-1] !="":
                     cmdArray==cmdArray[:-1]
