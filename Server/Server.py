@@ -52,10 +52,10 @@ class Server:
         self.start()
 
     def start(self):
-        self.server_socket = socket.socket()
-        self._set_socket(self.server_socket, VIDEO_CONFIG_PATH)
-        self.server_socket1 = socket.socket()
-        self._set_socket(self.server_socket1, ROBOT_CONFIG_PATH)
+        self.video_socket = socket.socket()
+        self._set_socket(self.video_socket, VIDEO_CONFIG_PATH)
+        self.robot_socket = socket.socket()
+        self._set_socket(self.robot_socket, ROBOT_CONFIG_PATH)
         self._start_video_thread()
         self._start_instruction_thread()
         logging.info('Server listening... ')
@@ -92,20 +92,20 @@ class Server:
 
     def _transmission_video(self):
         try:
-            self.connection, _ = self.server_socket.accept()
-            self.connection=self.connection.makefile('wb')
+            self.video_connection, _ = self.video_socket.accept()
+            self.video_connection = self.video_connection.makefile('wb')
         except:
             pass
         
-        self.server_socket.close()
+        self.video_socket.close()
         logging.info("socket video connected... ")
-        camera = self._get_camera_config(VIDEO_CONFIG_PATH)
+        self.camera = self._get_camera_config(VIDEO_CONFIG_PATH)
         output = StreamingOutput()
         encoder = JpegEncoder(q=IMAGE_QUALITY)
-        camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH)
-        self._stream_video(output,camera)
+        self.camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH)
+        self._stream_video(output)
         
-    def _stream_video(self,output: StreamingOutput,camera: Picamera2):
+    def _stream_video(self,output: StreamingOutput):
         while True:
             with output.condition:
                 output.condition.wait()
@@ -113,14 +113,17 @@ class Server:
             try:                
                 lenFrame = len(output.frame) 
                 lengthBin = struct.pack('<I', lenFrame)
-                self.connection.write(lengthBin)
-                self.connection.write(frame)
+                self.video_connection.write(lengthBin)
+                self.video_connection.write(frame)
             except Exception as e:
                 logging.error(e)
-                camera.stop_recording()
-                camera.close()
+                self._stop_camera()
                 logging.info("End transmit ... " )
                 break
+            
+    def _stop_camera(self):
+        self.camera.stop_recording()
+        self.camera.close()
 
     def _get_camera_config(self, config_path: str) -> Picamera2:
         camera = Picamera2()
@@ -138,17 +141,17 @@ class Server:
         
     def _accept_instructions(self):
         try:
-            self.connection1, _ = self.server_socket1.accept()
+            self.robot_connection, _ = self.robot_socket.accept()
             print ("Client connection successful !")
         except:
             print ("Client connect failed")
-            self.server_socket1.close()
+            self.robot_socket.close()
             
     def _process_instruction(self):
         while True:
             
             try:
-                allData=self.connection1.recv(1024).decode(ENCODING)
+                allData=self.robot_connection.recv(1024).decode(ENCODING)
             except:
                 if self.tcp_flag:
                     self._reset_server()
@@ -174,7 +177,7 @@ class Server:
                     try:
                         batteryVoltage=self.adc.batteryPower()
                         command=cmd.CMD_POWER+"#"+str(batteryVoltage[0])+"#"+str(batteryVoltage[1])+"\n"
-                        self.send_data(self.connection1,command)
+                        self.send_data(self.robot_connection,command)
                         if batteryVoltage[0] < 5.5 or batteryVoltage[1]<6:
                             for i in range(3):
                                 self.buzzer.run("1")
@@ -199,7 +202,7 @@ class Server:
                     thread_led.start()
                 elif cmd.CMD_SONIC in data:
                     command=cmd.CMD_SONIC+"#"+str(self.sonic.getDistance())+"\n"
-                    self.send_data(self.connection1,command)
+                    self.send_data(self.robot_connection,command)
                 elif cmd.CMD_HEAD in data:
                     if len(data)==3:
                         self.servo.setServoAngle(int(data[1]),int(data[2]))
@@ -229,8 +232,9 @@ class Server:
         self.tcp_flag=False
         try:
             stop_thread(self.video_thread)
+            self.video_connection.close()
+            self._stop_camera()
             stop_thread(self.instruction_thread)
-            self.connection.close()
-            self.connection1.close()
+            self.robot_connection.close()
         except :
             logging.warning("No client connection")
