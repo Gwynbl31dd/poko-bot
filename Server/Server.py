@@ -41,7 +41,7 @@ class StreamingOutput(io.BufferedIOBase):
 class Server:
 
     def __init__(self):
-        self.tcp_flag=False
+        self.tcp_flag=True
         self.led=Led()
         self.adc=ADC()
         self.servo=Servo()
@@ -56,7 +56,6 @@ class Server:
         self._set_socket(self.server_socket, VIDEO_CONFIG_PATH)
         self.server_socket1 = socket.socket()
         self._set_socket(self.server_socket1, ROBOT_CONFIG_PATH)
-        self.tcp_flag=True
         self._start_video_thread()
         self._start_instruction_thread()
         logging.info('Server listening... ')
@@ -131,9 +130,23 @@ class Server:
             camera.resolution = (data_loaded['height'], data_loaded['width'])
             camera.image_effect = data_loaded['effect']
         return camera
-    
+            
+    def _receive_instruction(self):
+        self._accept_instructions()
+        self._process_instruction()
+        logging.info("close_recv")
+        
+    def _accept_instructions(self):
+        try:
+            self.connection1, _ = self.server_socket1.accept()
+            print ("Client connection successful !")
+        except:
+            print ("Client connect failed")
+            self.server_socket1.close()
+            
     def _process_instruction(self):
         while True:
+            
             try:
                 allData=self.connection1.recv(1024).decode(ENCODING)
             except:
@@ -142,12 +155,13 @@ class Server:
                     break
                 else:
                     break
+                
             if allData=="" and self.tcp_flag:
                 self._reset_server()
                 break
             else:
                 cmdArray=allData.split('\n')
-                print(cmdArray)
+                logging.info(cmdArray)
                 if cmdArray[-1] !="":
                     cmdArray==cmdArray[:-1]
             for oneCmd in cmdArray:
@@ -210,29 +224,6 @@ class Server:
                 else:
                     self.control.order=data
                     self.control.timeout=time.time()
-            
-    def _receive_instruction(self):
-        self._accept_instructions()
-
-        self._process_instruction()
-            
-        try:
-            stop_thread(thread_led)
-        except:
-            pass
-        try:
-            stop_thread(thread_sonic)
-        except:
-            pass
-        logging.info("close_recv")
-        
-    def _accept_instructions(self):
-        try:
-            self.connection1, _ = self.server_socket1.accept()
-            print ("Client connection successful !")
-        except:
-            print ("Client connect failed")
-            self.server_socket1.close()
 
     def stop(self):
         self.tcp_flag=False
