@@ -88,7 +88,7 @@ class Server:
         try:
             connect.send(data.encode(ENCODING))
         except Exception as e:
-            print(e)
+            logging.error(e)
 
     def _transmission_video(self):
         try:
@@ -136,8 +136,12 @@ class Server:
             
     def _receive_instruction(self):
         self._accept_instructions()
-        while self.tcp_flag:
+        try:
             self._process_instruction()
+        except Exception as e:
+            if self.tcp_flag:
+                self._reset_server()
+                
         logging.info("close_recv")
         
     def _accept_instructions(self):
@@ -155,15 +159,11 @@ class Server:
                 instruction_data=self.robot_connection.recv(1024).decode(ENCODING)
             except Exception as e:
                 logging.error(e)
-                if self.tcp_flag:
-                    self._reset_server()
-                    break
-                else:
-                    break
+                raise e
                 
             if instruction_data=="" and self.tcp_flag:
-                self._reset_server()
-                break
+                raise e
+            
             else:
                 cmdArray=instruction_data.split('\n')
                 logging.info(cmdArray)
