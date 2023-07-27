@@ -19,6 +19,8 @@ from Ultrasonic import *
 from Command import COMMAND as cmd
 import yaml
 import logging
+import traceback
+
 logging.basicConfig(level = logging.INFO)
 
 VIDEO_CONFIG_PATH = "./config/video.yml"
@@ -75,6 +77,7 @@ class Server:
         self.video_thread.start()
         
     def _start_instruction_thread(self):
+        logging.info("start instruction thread")
         self.instruction_thread = threading.Thread(target=self._receive_instruction)
         self.instruction_thread.start()
     
@@ -91,9 +94,11 @@ class Server:
             logging.error(e)
 
     def _transmission_video(self):
+        logging.info("Video thread started...")
         try:
             self.video_connection, _ = self.video_socket.accept()
             self.video_connection = self.video_connection.makefile('wb')
+            logging.info("socket video connected... ")
         except Exception as e:
             logging.error(e)
         
@@ -135,10 +140,13 @@ class Server:
         return camera
             
     def _receive_instruction(self):
+        logging.info("Instruction thread started...")
         self._accept_instructions()
         try:
+            logging.info("process_instruction")
             self._process_instruction()
-        except Exception as e:
+        except:
+            traceback.print_exc()
             if self.tcp_flag:
                 self._reset_server()
                 
@@ -147,29 +155,23 @@ class Server:
     def _accept_instructions(self):
         try:
             self.robot_connection, _ = self.robot_socket.accept()
-            print ("Client connection successful !")
+            logging.info("Client connection successful !")
         except:
-            print ("Client connect failed")
+            logging.error("Client connect failed")
             self.robot_socket.close()
+            
+    def _split_instructions(self, instruction_data: str) -> list:
+        commands = instruction_data.split('\n')
+        logging.info(f"commands {commands}")
+        if commands[-1] != "":
+            commands = commands[:-1]
+        return commands
             
     def _process_instruction(self):
         while True:
-            
-            try:
-                instruction_data=self.robot_connection.recv(1024).decode(ENCODING)
-            except Exception as e:
-                logging.error(e)
-                raise e
-                
-            if instruction_data=="" and self.tcp_flag:
-                raise e
-            else:
-                cmdArray=instruction_data.split('\n')
-                logging.info(cmdArray)
-                if cmdArray[-1] !="":
-                    cmdArray==cmdArray[:-1]
-                    
-            for oneCmd in cmdArray:
+            instruction_data=self._read_data()
+            commands=self._split_instructions(instruction_data)
+            for oneCmd in commands:
                 data=oneCmd.split("#")
                 if data==None or data[0]=='':
                     continue
@@ -229,6 +231,16 @@ class Server:
                 else:
                     self.control.order=data
                     self.control.timeout=time.time()
+                    
+    def _read_data(self) -> str:
+        try:
+            data=self.robot_connection.recv(1024).decode(ENCODING)
+            if data=="":
+                raise Exception("Client disconnected")
+            return data
+        except Exception as e:
+            logging.error(e)
+            raise e
 
     def stop(self):
         self.tcp_flag=False
