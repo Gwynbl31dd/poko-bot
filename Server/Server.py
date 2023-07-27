@@ -3,7 +3,7 @@ import time
 import fcntl
 import socket
 import struct
-from picamera2 import Picamera2,Preview
+from picamera2 import Picamera2
 from picamera2.encoders import JpegEncoder
 from picamera2.outputs import FileOutput
 from picamera2.encoders import Quality
@@ -16,7 +16,7 @@ from Buzzer import *
 from Control import *
 from ADC import *
 from Ultrasonic import *
-from Command import COMMAND as cmd
+from Command import COMMAND
 import yaml
 import logging
 import traceback
@@ -171,16 +171,17 @@ class Server:
         while True:
             instruction_data=self._read_data()
             commands=self._split_instructions(instruction_data)
-            for oneCmd in commands:
-                data=oneCmd.split("#")
+            for instruction in commands:
+                data=instruction.split("#")
                 if data==None or data[0]=='':
                     continue
-                elif cmd.CMD_BUZZER in data:
+                instruction_type = data[0]
+                if COMMAND.CMD_BUZZER == instruction_type:
                     self.buzzer.run(data[1])
-                elif cmd.CMD_POWER in data:
+                elif COMMAND.CMD_POWER == instruction_type:
                     try:
                         batteryVoltage=self.adc.batteryPower()
-                        command=cmd.CMD_POWER+"#"+str(batteryVoltage[0])+"#"+str(batteryVoltage[1])+"\n"
+                        command=COMMAND.CMD_POWER+"#"+str(batteryVoltage[0])+"#"+str(batteryVoltage[1])+"\n"
                         self.send_data(self.robot_connection,command)
                         if batteryVoltage[0] < 5.5 or batteryVoltage[1]<6:
                             for i in range(3):
@@ -190,40 +191,40 @@ class Server:
                                 time.sleep(0.1)
                     except:
                         pass
-                elif cmd.CMD_LED in data:
+                elif COMMAND.CMD_LED == instruction_type:
                     try:
                         stop_thread(thread_led)
                     except:
                         pass
                     thread_led=threading.Thread(target=self.led.light,args=(data,))
                     thread_led.start()   
-                elif cmd.CMD_LED_MOD in data:
+                elif COMMAND.CMD_LED_MOD == instruction_type:
                     try:
                         stop_thread(thread_led)
                     except:
                         pass
                     thread_led=threading.Thread(target=self.led.light,args=(data,))
                     thread_led.start()
-                elif cmd.CMD_SONIC in data:
-                    command=cmd.CMD_SONIC+"#"+str(self.sonic.getDistance())+"\n"
+                elif COMMAND.CMD_SONIC == instruction_type:
+                    command=COMMAND.CMD_SONIC+"#"+str(self.sonic.getDistance())+"\n"
                     self.send_data(self.robot_connection,command)
-                elif cmd.CMD_HEAD in data:
+                elif COMMAND.CMD_HEAD == instruction_type:
                     if len(data)==3:
                         self.servo.setServoAngle(int(data[1]),int(data[2]))
-                elif cmd.CMD_CAMERA in data:
+                elif COMMAND.CMD_CAMERA == instruction_type:
                     if len(data)==3:
                         x=self.control.restriction(int(data[1]),50,180)
                         y=self.control.restriction(int(data[2]),0,180)
                         self.servo.setServoAngle(0,x)
                         self.servo.setServoAngle(1,y)
-                elif cmd.CMD_RELAX in data:
+                elif COMMAND.CMD_RELAX == instruction_type:
                     if self.control.relax_flag==False:
                         self.control.relax(True)
                         self.control.relax_flag=True
                     else:
                         self.control.relax(False)
                         self.control.relax_flag=False
-                elif cmd.CMD_SERVOPOWER in data:
+                elif COMMAND.CMD_SERVOPOWER == instruction_type:
                     if data[1]=="0":
                         GPIO.output(self.control.GPIO_4,True)
                     else:
