@@ -1,6 +1,5 @@
 import io
 import time
-import fcntl
 import socket
 import struct
 from picamera2 import Picamera2
@@ -20,14 +19,16 @@ from Command import COMMAND
 import yaml
 import logging
 import traceback
+from commands.command import Command
 
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 VIDEO_CONFIG_PATH = "./config/video.yml"
 ROBOT_CONFIG_PATH = "./config/robot.yml"
-HOST_IP = "0.0.0.0" # Any interface
+HOST_IP = "0.0.0.0"  # Any interface
 IMAGE_QUALITY = 90
-ENCODING='utf-8'
+ENCODING = 'utf-8'
+
 
 class StreamingOutput(io.BufferedIOBase):
 
@@ -40,16 +41,18 @@ class StreamingOutput(io.BufferedIOBase):
             self.frame = buf
             self.condition.notify_all()
 
-class Server:
 
-    def __init__(self):
-        self.tcp_flag=True
-        self.led=Led()
-        self.adc=ADC()
-        self.servo=Servo()
-        self.buzzer=Buzzer()
-        self.control=Control()
-        self.sonic=Ultrasonic()
+class Server:
+    # command is a list of commands
+    def __init__(self, commands: dict):
+        self.tcp_flag = True
+        self.led = Led()
+        self.adc = ADC()
+        self.servo = Servo()
+        self.buzzer = Buzzer()
+        self.control = Control()
+        self.sonic = Ultrasonic()
+        self.commands = commands
         self.control.Thread_conditiona.start()
         self.start()
 
@@ -61,9 +64,9 @@ class Server:
         self._start_video_thread()
         self._start_instruction_thread()
         logging.info('Server listening... ')
-        
-    def _set_socket(self,socket_to_assign, config_path: str):
-        socket_to_assign.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEPORT,1)
+
+    def _set_socket(self, socket_to_assign, config_path: str):
+        socket_to_assign.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         self._set_port(socket_to_assign, config_path, HOST_IP)
 
     def _set_port(self, socket_to_assign, config_path: str, ip: str):
@@ -71,23 +74,24 @@ class Server:
             data_loaded = yaml.safe_load(stream)
             socket_to_assign.bind((ip, data_loaded['port']))
             socket_to_assign.listen(1)
-            
+
     def _start_video_thread(self):
         self.video_thread = threading.Thread(target=self._transmission_video)
         self.video_thread.start()
-        
+
     def _start_instruction_thread(self):
         logging.info("start instruction thread")
-        self.instruction_thread = threading.Thread(target=self._receive_instruction)
+        self.instruction_thread = threading.Thread(
+            target=self._receive_instruction)
         self.instruction_thread.start()
-    
+
     def _reset_server(self):
         self.stop()
         self.start()
         self._start_video_thread()
         self._start_instruction_thread()
 
-    def send_data(self,connect,data: str):
+    def send_data(self, connect, data: str):
         try:
             connect.send(data.encode(ENCODING))
         except Exception as e:
@@ -101,31 +105,32 @@ class Server:
             logging.info("socket video connected... ")
         except Exception as e:
             logging.error(e)
-        
+
         self.video_socket.close()
         logging.info("socket video connected... ")
         self.camera = self._get_camera_config(VIDEO_CONFIG_PATH)
         output = StreamingOutput()
         encoder = JpegEncoder(q=IMAGE_QUALITY)
-        self.camera.start_recording(encoder, FileOutput(output),quality=Quality.VERY_HIGH)
+        self.camera.start_recording(encoder, FileOutput(
+            output), quality=Quality.VERY_HIGH)
         self._stream_video(output)
-        
-    def _stream_video(self,output: StreamingOutput):
+
+    def _stream_video(self, output: StreamingOutput):
         while True:
             with output.condition:
                 output.condition.wait()
                 frame = output.frame
-            try:                
-                lenFrame = len(output.frame) 
+            try:
+                lenFrame = len(output.frame)
                 lengthBin = struct.pack('<I', lenFrame)
                 self.video_connection.write(lengthBin)
                 self.video_connection.write(frame)
             except Exception as e:
                 logging.error(e)
                 self._stop_camera()
-                logging.info("End transmit ... " )
+                logging.info("End transmit ... ")
                 break
-            
+
     def _stop_camera(self):
         self.camera.stop_recording()
         self.camera.close()
@@ -138,7 +143,7 @@ class Server:
             camera.resolution = (data_loaded['height'], data_loaded['width'])
             camera.image_effect = data_loaded['effect']
         return camera
-            
+
     def _receive_instruction(self):
         logging.info("Instruction thread started...")
         self._accept_instructions()
@@ -149,9 +154,9 @@ class Server:
             traceback.print_exc()
             if self.tcp_flag:
                 self._reset_server()
-                
+
         logging.info("close_recv")
-        
+
     def _accept_instructions(self):
         try:
             self.robot_connection, _ = self.robot_socket.accept()
@@ -159,31 +164,39 @@ class Server:
         except:
             logging.error("Client connect failed")
             self.robot_socket.close()
-            
+
     def _split_instructions(self, instruction_data: str) -> list:
         commands = instruction_data.split('\n')
         logging.info(f"commands {commands}")
         if commands[-1] != "":
             commands = commands[:-1]
         return commands
-            
+
     def _process_instruction(self):
         while True:
-            instruction_data=self._read_data()
-            commands=self._split_instructions(instruction_data)
+            instruction_data = self._read_data()
+            commands = self._split_instructions(instruction_data)
             for instruction in commands:
-                data=instruction.split("#")
-                if data==None or data[0]=='':
+                data = instruction.split("#")
+                if data == None or data[0] == '':
                     continue
                 instruction_type = data[0]
+                
+                try:
+                    self.commands[instruction_type].run(data)
+                except:
+                    pass
+                
                 if COMMAND.CMD_BUZZER == instruction_type:
                     self.buzzer.run(data[1])
                 elif COMMAND.CMD_POWER == instruction_type:
                     try:
-                        batteryVoltage=self.adc.batteryPower()
-                        command=COMMAND.CMD_POWER+"#"+str(batteryVoltage[0])+"#"+str(batteryVoltage[1])+"\n"
-                        self.send_data(self.robot_connection,command)
-                        if batteryVoltage[0] < 5.5 or batteryVoltage[1]<6:
+                        batteryVoltage = self.adc.batteryPower()
+                        command = COMMAND.CMD_POWER+"#" + \
+                            str(batteryVoltage[0])+"#" + \
+                            str(batteryVoltage[1])+"\n"
+                        self.send_data(self.robot_connection, command)
+                        if batteryVoltage[0] < 5.5 or batteryVoltage[1] < 6:
                             for i in range(3):
                                 self.buzzer.run("1")
                                 time.sleep(0.15)
@@ -196,47 +209,50 @@ class Server:
                         stop_thread(thread_led)
                     except:
                         pass
-                    thread_led=threading.Thread(target=self.led.light,args=(data,))
-                    thread_led.start()   
+                    thread_led = threading.Thread(
+                        target=self.led.light, args=(data,))
+                    thread_led.start()
                 elif COMMAND.CMD_LED_MOD == instruction_type:
                     try:
                         stop_thread(thread_led)
                     except:
                         pass
-                    thread_led=threading.Thread(target=self.led.light,args=(data,))
+                    thread_led = threading.Thread(
+                        target=self.led.light, args=(data,))
                     thread_led.start()
                 elif COMMAND.CMD_SONIC == instruction_type:
-                    command=COMMAND.CMD_SONIC+"#"+str(self.sonic.getDistance())+"\n"
-                    self.send_data(self.robot_connection,command)
+                    command = COMMAND.CMD_SONIC+"#" + \
+                        str(self.sonic.getDistance())+"\n"
+                    self.send_data(self.robot_connection, command)
                 elif COMMAND.CMD_HEAD == instruction_type:
-                    if len(data)==3:
-                        self.servo.setServoAngle(int(data[1]),int(data[2]))
+                    if len(data) == 3:
+                        self.servo.setServoAngle(int(data[1]), int(data[2]))
                 elif COMMAND.CMD_CAMERA == instruction_type:
-                    if len(data)==3:
-                        x=self.control.restriction(int(data[1]),50,180)
-                        y=self.control.restriction(int(data[2]),0,180)
-                        self.servo.setServoAngle(0,x)
-                        self.servo.setServoAngle(1,y)
+                    if len(data) == 3:
+                        x = self.control.restriction(int(data[1]), 50, 180)
+                        y = self.control.restriction(int(data[2]), 0, 180)
+                        self.servo.setServoAngle(0, x)
+                        self.servo.setServoAngle(1, y)
                 elif COMMAND.CMD_RELAX == instruction_type:
-                    if self.control.relax_flag==False:
+                    if self.control.relax_flag == False:
                         self.control.relax(True)
-                        self.control.relax_flag=True
+                        self.control.relax_flag = True
                     else:
                         self.control.relax(False)
-                        self.control.relax_flag=False
+                        self.control.relax_flag = False
                 elif COMMAND.CMD_SERVOPOWER == instruction_type:
-                    if data[1]=="0":
-                        GPIO.output(self.control.GPIO_4,True)
+                    if data[1] == "0":
+                        GPIO.output(self.control.GPIO_4, True)
                     else:
-                        GPIO.output(self.control.GPIO_4,False)
+                        GPIO.output(self.control.GPIO_4, False)
                 else:
-                    self.control.order=data
-                    self.control.timeout=time.time()
-                    
+                    self.control.order = data
+                    self.control.timeout = time.time()
+
     def _read_data(self) -> str:
         try:
-            data=self.robot_connection.recv(1024).decode(ENCODING)
-            if data=="":
+            data = self.robot_connection.recv(1024).decode(ENCODING)
+            if data == "":
                 raise Exception("Client disconnected")
             return data
         except Exception as e:
@@ -244,12 +260,12 @@ class Server:
             raise e
 
     def stop(self):
-        self.tcp_flag=False
+        self.tcp_flag = False
         try:
             stop_thread(self.video_thread)
             self.video_connection.close()
             self._stop_camera()
             stop_thread(self.instruction_thread)
             self.robot_connection.close()
-        except :
+        except:
             logging.warning("No client connection")
