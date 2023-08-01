@@ -44,13 +44,13 @@ class StreamingOutput(io.BufferedIOBase):
 
 class Server:
     # command is a list of commands
-    def __init__(self, commands: dict):
+    def __init__(self, commands: dict, servo: Servo, control: Control):
         self.tcp_flag = True
         self.led = Led()
         self.adc = ADC()
-        self.servo = Servo()
+        self.servo = servo
         self.buzzer = Buzzer()
-        self.control = Control()
+        self.control = control
         self.sonic = Ultrasonic()
         self.commands = commands
         self.control.Thread_conditiona.start()
@@ -230,12 +230,6 @@ class Server:
                 elif COMMAND.CMD_HEAD == instruction_type:
                     if len(data) == 3:
                         self.servo.setServoAngle(int(data[1]), int(data[2]))
-                elif COMMAND.CMD_CAMERA == instruction_type:
-                    if len(data) == 3:
-                        x = self.control.restriction(int(data[1]), 50, 180)
-                        y = self.control.restriction(int(data[2]), 0, 180)
-                        self.servo.setServoAngle(0, x)
-                        self.servo.setServoAngle(1, y)
                 elif COMMAND.CMD_RELAX == instruction_type:
                     if self.control.relax_flag == False:
                         self.control.relax(True)

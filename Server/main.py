@@ -12,8 +12,10 @@ from commands.camera import Camera
 class App():
 
     def __init__(self):
-        commands = self.get_commands()
-        self.server = Server(commands)
+        servo = Servo()
+        control = Control()
+        commands = self.get_commands(servo, control)
+        self.server = Server(commands, servo, control)
 
     def run(self):
         try:
@@ -23,10 +25,8 @@ class App():
             self.server.stop()
             os._exit(0)
 
-    def get_commands(self) -> dict:
+    def get_commands(self, servo: Servo, control: Control) -> dict:
         commands = {}
-        servo = Servo()
-        control = Control()
         self._add_commands_head(servo, commands)
         self._add_commands_camera(servo, control, commands)
         return commands
