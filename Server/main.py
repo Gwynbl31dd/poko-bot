@@ -3,15 +3,18 @@
 import os
 from Server import Server
 from Servo import Servo
+from Control import Control
 from commands.head import Head
 from commands.command import Command
+from commands.camera import Camera
+
 
 class App():
 
     def __init__(self):
         commands = self.get_commands()
-        self.server=Server(commands)
-            
+        self.server = Server(commands)
+
     def run(self):
         try:
             while True:
@@ -19,14 +22,24 @@ class App():
         except KeyboardInterrupt:
             self.server.stop()
             os._exit(0)
-            
+
     def get_commands(self) -> dict:
         commands = {}
         servo = Servo()
-        commands[Command.CMD_HEAD] = Head(servo)
+        control = Control()
+        self._add_commands_head(servo, commands)
+        self._add_commands_camera(servo, control, commands)
         return commands
-        
+
+    def _add_commands_head(self, servo: Servo, commands: dict):
+        commands[Command.CMD_HEAD] = []
+        commands[Command.CMD_HEAD].append(Head(servo))
+
+    def _add_commands_camera(self, servo: Servo, control: Control, commands: dict):
+        commands[Command.CMD_CAMERA] = []
+        commands[Command.CMD_CAMERA].append(Camera(servo, control))
+
+
 if __name__ == '__main__':
     app = App()
     app.run()
-

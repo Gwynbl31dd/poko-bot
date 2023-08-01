@@ -183,8 +183,11 @@ class Server:
                 instruction_type = data[0]
                 
                 try:
-                    self.commands[instruction_type].run(data)
-                except:
+                    for command in self.commands[instruction_type]:
+                        logging.info(f"command {command}")
+                        command.run(data)
+                except Exception as e:
+                    logging.error(e)
                     pass
                 
                 if COMMAND.CMD_BUZZER == instruction_type:
