@@ -1,4 +1,4 @@
 #!/bin/sh
 cd Server
-sudo cp point.txt /home/apaulin
+sudo cp point.txt ~
 sudo python main.py
